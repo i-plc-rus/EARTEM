@@ -1,4 +1,10 @@
 <resources>
     <string name="app_name">EARTEM</string>
     <string name="title_activity_main">MainActivity</string>
+    <string name="welcome_title">Welcome to Litter Map</string>
+    <string name="spotter_button">I\'m Spotter</string>
+    <string name="spotter_subtitle">No registration required.\nI just want to mark polluted areas on the map.</string>
+    <string name="volunteer_button">I\'m a Volunteer</string>
+    <string name="volunteer_subtitle">Ready to register.\nI want to mark polluted areas and help clean them up.</string>
+    <string name="google_maps_api_key">AIzaSyBIKDy-lJ1uiwAJ8YePn8ZFgk3fr9wpvmI</string>
 </resources>

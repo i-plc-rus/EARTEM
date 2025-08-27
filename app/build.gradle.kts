@@ -25,6 +25,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
@@ -58,4 +59,14 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    implementation("androidx.compose.material:material-icons-extended:1.7.8")
+
+//    implementation("com.google.maps.android:maps-compose:6.7.2")
+//    implementation("com.google.android.gms:play-services-maps:19.2.0")
+//
+//
+//    implementation("com.google.maps.android:maps-compose-utils:6.7.2")
+//    implementation("com.google.maps.android:maps-compose-widgets:6.7.2")
+
+
 }
