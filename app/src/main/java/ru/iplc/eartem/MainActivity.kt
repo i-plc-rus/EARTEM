@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -32,6 +34,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -116,6 +120,16 @@ fun WelcomeScreen() {
 
 @Composable
 fun StylizedBackground() {
+    Image(
+        painter = painterResource(id = R.mipmap.ic_logo_foreground), // если в mipmap
+        contentDescription = "background logo",
+        modifier = Modifier.fillMaxSize(),
+        contentScale = ContentScale.Crop
+    )
+}
+
+@Composable
+fun x_StylizedBackground() {
     // Красивый градиентный фон, имитирующий карту
     Box(
         modifier = Modifier
@@ -163,7 +177,7 @@ fun RoleButton(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .height(120.dp),
+            .wrapContentHeight(),   // вместо .height(120.dp)
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
             contentColor = MaterialTheme.colorScheme.onSurface
@@ -175,7 +189,7 @@ fun RoleButton(
     ) {
         Row(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -188,7 +202,8 @@ fun RoleButton(
             )
 
             Column(
-                horizontalAlignment = Alignment.Start
+                horizontalAlignment = Alignment.Start,
+                modifier = Modifier.weight(1f) // текст займёт всё оставшееся место
             ) {
                 Text(
                     text = title,
@@ -204,11 +219,12 @@ fun RoleButton(
                     text = subtitle,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
-                    lineHeight = 16.sp
+                    lineHeight = 18.sp
                 )
             }
         }
     }
+
 }
 
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp")

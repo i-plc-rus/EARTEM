@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">EARTEM</string>
+    <string name="app_name">LitterMap</string>
     <string name="title_activity_main">MainActivity</string>
     <string name="welcome_title">Welcome to Litter Map</string>
     <string name="spotter_button">I\'m Spotter</string>
