@@ -1,68 +1,79 @@
 package ru.iplc.eartem
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.CleanHands
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.app.ActivityCompat
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.MapView
+import com.google.android.gms.maps.model.LatLng
 import ru.iplc.eartem.ui.theme.EARTEMTheme
 
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
         setContent {
             EARTEMTheme {
-                WelcomeScreen()
+                val navController = rememberNavController()
+                NavHost(navController, startDestination = "welcome") {
+                    composable("welcome") {
+                        WelcomeScreen(
+                            onSpotterClick = { navController.navigate("map") }
+                        )
+                    }
+                    composable("map") {
+                        MapScreen()
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-fun WelcomeScreen() {
+fun WelcomeScreen(
+    onSpotterClick: () -> Unit
+) {
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
-            // Stylized Background вместо карты
             StylizedBackground()
 
-            // Content overlay
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = Color.Transparent
@@ -80,7 +91,6 @@ fun WelcomeScreen() {
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        // Welcome Title
                         Text(
                             text = "Welcome to Litter Map",
                             style = MaterialTheme.typography.headlineLarge.copy(
@@ -94,21 +104,19 @@ fun WelcomeScreen() {
 
                         Spacer(modifier = Modifier.height(32.dp))
 
-                        // Spotter Button
                         RoleButton(
                             title = "I'm Spotter",
                             subtitle = "No registration required.\nI just want to mark polluted areas on the map.",
                             icon = Icons.Default.LocationOn,
-                            onClick = { /* Handle spotter click */ },
+                            onClick = onSpotterClick,
                             modifier = Modifier.padding(bottom = 16.dp)
                         )
 
-                        // Volunteer Button
                         RoleButton(
                             title = "I'm a Volunteer",
                             subtitle = "Ready to register.\nI want to mark polluted areas and help clean them up.",
                             icon = Icons.Default.CleanHands,
-                            onClick = { /* Handle volunteer click */ },
+                            onClick = { /* Volunteer click */ },
                             modifier = Modifier.padding(bottom = 16.dp)
                         )
                     }
@@ -121,47 +129,10 @@ fun WelcomeScreen() {
 @Composable
 fun StylizedBackground() {
     Image(
-        painter = painterResource(id = R.mipmap.ic_logo_foreground), // если в mipmap
+        painter = painterResource(id = R.mipmap.ic_logo_foreground),
         contentDescription = "background logo",
         modifier = Modifier.fillMaxSize(),
         contentScale = ContentScale.Crop
-    )
-}
-
-@Composable
-fun x_StylizedBackground() {
-    // Красивый градиентный фон, имитирующий карту
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF2E7D32), // Dark Green
-                        Color(0xFF4CAF50), // Green
-                        Color(0xFF2196F3), // Blue
-                        Color(0xFF4CAF50), // Green
-                        Color(0xFF2E7D32)  // Dark Green
-                    )
-                )
-            )
-    )
-
-    // Наложение с текстурой сетки
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        Color.Transparent,
-                        Color.Black.copy(alpha = 0.05f),
-                        Color.Transparent
-                    ),
-                    start = androidx.compose.ui.geometry.Offset(0f, 0f),
-                    end = androidx.compose.ui.geometry.Offset(20f, 20f)
-                )
-            )
     )
 }
 
@@ -177,7 +148,7 @@ fun RoleButton(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
-            .wrapContentHeight(),   // вместо .height(120.dp)
+            .wrapContentHeight(),
         colors = ButtonDefaults.buttonColors(
             containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
             contentColor = MaterialTheme.colorScheme.onSurface
@@ -203,13 +174,11 @@ fun RoleButton(
 
             Column(
                 horizontalAlignment = Alignment.Start,
-                modifier = Modifier.weight(1f) // текст займёт всё оставшееся место
+                modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold
-                    ),
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                     color = MaterialTheme.colorScheme.primary
                 )
 
@@ -224,13 +193,149 @@ fun RoleButton(
             }
         }
     }
-
 }
+
+@Composable
+fun MapScreen() {
+    val context = LocalContext.current
+    val mapView = rememberMapViewWithLifecycle()
+    var selectedMarker by remember { mutableStateOf<LatLng?>(null) }
+    var showDialog by remember { mutableStateOf(false) }
+
+    Box(Modifier.fillMaxSize()) {
+        AndroidView({ mapView }) { mapView ->
+            mapView.getMapAsync { map ->
+                val fused = LocationServices.getFusedLocationProviderClient(context)
+                if (ActivityCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_FINE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED ||
+                    ActivityCompat.checkSelfPermission(
+                        context,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    ) == PackageManager.PERMISSION_GRANTED
+                ) {
+                    fused.lastLocation.addOnSuccessListener { location ->
+                        location?.let {
+                            val myPos = LatLng(it.latitude, it.longitude)
+                            map.animateCamera(CameraUpdateFactory.newLatLngZoom(myPos, 16f))
+                        }
+                    }
+                }
+            }
+        }
+
+        FloatingActionButton(
+            onClick = {
+                mapView.getMapAsync { map ->
+                    val fused = LocationServices.getFusedLocationProviderClient(context)
+                    fused.lastLocation.addOnSuccessListener { location ->
+                        location?.let {
+                            val myPos = LatLng(it.latitude, it.longitude)
+                            map.animateCamera(CameraUpdateFactory.newLatLngZoom(myPos, 16f))
+                        }
+                    }
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        ) {
+            Icon(Icons.Default.LocationOn, contentDescription = "My location")
+        }
+    }
+
+    if (showDialog && selectedMarker != null) {
+        MarkDialog(
+            latLng = selectedMarker!!,
+            onDismiss = { showDialog = false },
+            onSave = { description, photoUri ->
+                // TODO: обработка (сохранить/отправить на сервер)
+                showDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun MarkDialog(
+    latLng: LatLng,
+    onDismiss: () -> Unit,
+    onSave: (String, Uri?) -> Unit
+) {
+    var description by remember { mutableStateOf("") }
+    var photoUri by remember { mutableStateOf<Uri?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Mark pollution point") },
+        text = {
+            Column {
+                Text("Coordinates: ${latLng.latitude}, ${latLng.longitude}")
+
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Description") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = { /* TODO: открыть фото-пикер */ }) {
+                    Text("Attach Photo")
+                }
+                photoUri?.let { Text("Photo selected: $it") }
+            }
+        },
+        confirmButton = {
+            Button(onClick = { onSave(description, photoUri) }) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+fun rememberMapViewWithLifecycle(): MapView {
+    val context = LocalContext.current
+    val mapView = remember { MapView(context) }
+
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+
+    // MapView требует onCreate
+    DisposableEffect(lifecycle, mapView) {
+        mapView.onCreate(null) // без сохранённого состояния
+
+        val observer = object : DefaultLifecycleObserver {
+            override fun onStart(owner: LifecycleOwner) = mapView.onStart()
+            override fun onResume(owner: LifecycleOwner) = mapView.onResume()
+            override fun onPause(owner: LifecycleOwner) = mapView.onPause()
+            override fun onStop(owner: LifecycleOwner) = mapView.onStop()
+            override fun onDestroy(owner: LifecycleOwner) = mapView.onDestroy()
+        }
+
+        lifecycle.addObserver(observer)
+
+        onDispose {
+            lifecycle.removeObserver(observer)
+        }
+    }
+
+    return mapView
+}
+
+
 
 @Preview(showBackground = true, device = "spec:width=411dp,height=891dp")
 @Composable
 fun WelcomeScreenPreview() {
     EARTEMTheme {
-        WelcomeScreen()
+        WelcomeScreen(onSpotterClick = {})
     }
 }
