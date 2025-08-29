@@ -5,8 +5,10 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -33,6 +35,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import androidx.media3.common.util.Log
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -70,6 +73,8 @@ class MainActivity : ComponentActivity() {
 fun WelcomeScreen(
     onSpotterClick: () -> Unit
 ) {
+    var showVolunteerDialog by remember { mutableStateOf(false) }
+
     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
             StylizedBackground()
@@ -116,7 +121,7 @@ fun WelcomeScreen(
                             title = "I'm a Volunteer",
                             subtitle = "Ready to register.\nI want to mark polluted areas and help clean them up.",
                             icon = Icons.Default.CleanHands,
-                            onClick = { /* Volunteer click */ },
+                            onClick = { showVolunteerDialog = true },
                             modifier = Modifier.padding(bottom = 16.dp)
                         )
                     }
@@ -124,7 +129,18 @@ fun WelcomeScreen(
             }
         }
     }
+
+    if (showVolunteerDialog) {
+        VolunteerRegistrationDialog(
+            onDismiss = { showVolunteerDialog = false },
+            onSave = { name, contact, photoUri ->
+                // TODO: отправить на сервер
+                showVolunteerDialog = false
+            }
+        )
+    }
 }
+
 
 @Composable
 fun StylizedBackground() {
@@ -222,8 +238,17 @@ fun MapScreen() {
                         }
                     }
                 }
+
+                // 🔽 вот сюда вставляем
+                map.setOnMapClickListener { latLng ->
+                    map.clear()
+                    map.addMarker(com.google.android.gms.maps.model.MarkerOptions().position(latLng))
+                    selectedMarker = latLng
+                    showDialog = true
+                }
             }
         }
+
 
         FloatingActionButton(
             onClick = {
@@ -249,57 +274,87 @@ fun MapScreen() {
         MarkDialog(
             latLng = selectedMarker!!,
             onDismiss = { showDialog = false },
-            onSave = { description, photoUri ->
-                // TODO: обработка (сохранить/отправить на сервер)
+            onSave = { description, shortText, photoUri ->
+                // TODO: отправка на сервер
+                Log.d("MapScreen", "Saved: $description, $shortText, $photoUri")
                 showDialog = false
             }
         )
     }
+
 }
 
 @Composable
 fun MarkDialog(
     latLng: LatLng,
     onDismiss: () -> Unit,
-    onSave: (String, Uri?) -> Unit
+    onSave: (description: String, shortText: String, photoUri: Uri) -> Unit
 ) {
     var description by remember { mutableStateOf("") }
+    var shortText by remember { mutableStateOf("") }
     var photoUri by remember { mutableStateOf<Uri?>(null) }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        photoUri = uri
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Mark pollution point") },
+        title = { Text("Add pollution point") },
         text = {
-            Column {
-                Text("Coordinates: ${latLng.latitude}, ${latLng.longitude}")
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
+                Text("Location: ${latLng.latitude}, ${latLng.longitude}")
 
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = shortText,
+                    onValueChange = { shortText = it },
+                    label = { Text("Short description of the pollution point (e.g. “Near café”)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
                     value = description,
                     onValueChange = { description = it },
                     label = { Text("Description") },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3
                 )
 
-                Spacer(Modifier.height(8.dp))
-                Button(onClick = { /* TODO: открыть фото-пикер */ }) {
-                    Text("Attach Photo")
+                Spacer(Modifier.height(12.dp))
+                Button(onClick = { launcher.launch("image/*") }) {
+                    Text("Прикрепить фото")
                 }
-                photoUri?.let { Text("Photo selected: $it") }
+                photoUri?.let {
+                    Text("Выбрано фото: $it", fontSize = 12.sp)
+                }
             }
         },
         confirmButton = {
-            Button(onClick = { onSave(description, photoUri) }) {
-                Text("Save")
+            Button(
+                onClick = {
+                    if (photoUri != null && description.isNotBlank()) {
+                        onSave(description, shortText, photoUri!!)
+                    }
+                },
+                enabled = photoUri != null && description.isNotBlank()
+            ) {
+                Text("Сохранить")
             }
         },
         dismissButton = {
             OutlinedButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text("Отмена")
             }
         }
     )
 }
+
 
 @Composable
 fun rememberMapViewWithLifecycle(): MapView {
@@ -329,6 +384,70 @@ fun rememberMapViewWithLifecycle(): MapView {
 
     return mapView
 }
+
+
+@Composable
+fun VolunteerRegistrationDialog(
+    onDismiss: () -> Unit,
+    onSave: (name: String, contact: String, photoUri: Uri?) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var contact by remember { mutableStateOf("") }
+    var photoUri by remember { mutableStateOf<Uri?>(null) }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        photoUri = uri
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Volunteer Registration") },
+        text = {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Name") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = contact,
+                    onValueChange = { contact = it },
+                    label = { Text("Contact (email or phone)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(12.dp))
+                Button(onClick = { launcher.launch("image/*") }) {
+                    Text("Attach profile photo")
+                }
+
+                photoUri?.let {
+                    Text("Selected photo: $it", fontSize = 12.sp)
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onSave(name, contact, photoUri) },
+                enabled = name.isNotBlank() && contact.isNotBlank()
+            ) {
+                Text("Register")
+            }
+        },
+        dismissButton = {
+            OutlinedButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+
 
 
 
